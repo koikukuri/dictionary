@@ -1,0 +1,13 @@
+# Netlify デプロイ用（任意）
+# Netlify の Publish directory をリポジトリルートに設定し、
+# 以下のリダイレクトで / → /web/ へ誘導
+
+[[redirects]]
+  from = "/"
+  to = "/web/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*.csv"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
