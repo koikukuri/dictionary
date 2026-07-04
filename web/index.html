@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>謎解き単語検索</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1>謎解き単語検索</h1>
+      <div id="loadStatus" class="load-status">読込中…</div>
+    </header>
+
+    <nav class="tabs">
+      <button type="button" class="tab active" data-tab="nl">自然文</button>
+      <button type="button" class="tab" data-tab="pattern">条件</button>
+    </nav>
+
+    <section id="panel-nl" class="panel active">
+      <p class="guide">日本語で条件を書いて検索できます。タップして例文を試せます。</p>
+      <div id="nlExamples" class="example-list"></div>
+      <label class="field">
+        <span class="field-title">検索クエリ</span>
+        <input id="nlQuery" type="text" class="input-lg" enterkeyhint="search">
+      </label>
+      <p class="field-title">文字位置はどちらで判定？</p>
+      <div class="segmented" role="group" aria-label="文字位置の判定">
+        <label class="segmented-item">
+          <input type="radio" name="nlTarget" value="word" checked>
+          <span>表記</span>
+        </label>
+        <label class="segmented-item">
+          <input type="radio" name="nlTarget" value="reading">
+          <span>よみ</span>
+        </label>
+      </div>
+      <p class="hint-text">よみ選択時はカタカナ・ひらがなを区別しません</p>
+      <button type="button" id="btnNlSearch" class="btn primary block">検索</button>
+    </section>
+
+    <section id="panel-pattern" class="panel">
+      <p class="guide">使う条件だけ選んでください。「指定なし」「空欄」は無視されます。</p>
+
+      <div class="segmented pattern-target" role="group" aria-label="検索対象">
+        <label class="segmented-item">
+          <input type="radio" name="patternTarget" value="word" checked>
+          <span>表記で判定</span>
+        </label>
+        <label class="segmented-item">
+          <input type="radio" name="patternTarget" value="reading">
+          <span>よみで判定</span>
+        </label>
+      </div>
+      <p class="hint-text">よみ選択時はカタカナ・ひらがなを区別しません</p>
+
+      <details class="accordion" open>
+        <summary>① 文字数・先頭・末尾</summary>
+        <div class="accordion-body">
+          <label class="field">
+            <span class="field-title">全体の文字数</span>
+            <span class="field-desc">何文字の言葉を探すか</span>
+            <select id="filterLength" class="select"></select>
+          </label>
+          <label class="check">
+            <input id="lengthOnSurface" type="checkbox">
+            <span>表記の文字数で数える（通常はよみの文字数）</span>
+          </label>
+
+          <p class="field-title">先頭・末尾・含む文字</p>
+          <p class="field-desc">1文字ずつ。使わない項目は空欄のまま</p>
+          <div class="char-row">
+            <label class="char-field">
+              <span class="char-label">先頭</span>
+              <input id="startsWith" type="text" class="char-input" maxlength="1" inputmode="text" autocomplete="off" aria-label="先頭の1文字">
+            </label>
+            <label class="char-field">
+              <span class="char-label">末尾</span>
+              <input id="endsWith" type="text" class="char-input" maxlength="1" inputmode="text" autocomplete="off" aria-label="末尾の1文字">
+            </label>
+            <label class="char-field">
+              <span class="char-label">含む</span>
+              <input id="contains" type="text" class="char-input" maxlength="1" inputmode="text" autocomplete="off" aria-label="含む1文字">
+            </label>
+          </div>
+        </div>
+      </details>
+
+      <details class="accordion" open>
+        <summary>② 文字位置（◯文字目が◯）</summary>
+        <div class="accordion-body">
+          <p class="field-desc">左で「何文字目」、右の大きい枠に「その文字」を1文字入力</p>
+          <div id="posFields" class="pos-list"></div>
+          <div class="pos-actions">
+            <button type="button" id="btnAddPos" class="btn">＋ 条件を追加</button>
+            <button type="button" id="btnRemovePos" class="btn">− 削除</button>
+          </div>
+        </div>
+      </details>
+
+      <details class="accordion">
+        <summary>③ カテゴリ・キーワード</summary>
+        <div class="accordion-body">
+          <span class="field-title">メインカテゴリ</span>
+          <p class="field-desc">絞り込みたいカテゴリにチェック（複数可）</p>
+          <div id="categoryChecks" class="check-list"></div>
+          <label class="field">
+            <span class="field-title">キーワード</span>
+            <span class="field-desc">ヒント・説明に含まれる語。カンマ区切りで複数指定可</span>
+            <input id="hintKeywords" type="text" class="input-text" autocomplete="off">
+          </label>
+        </div>
+      </details>
+
+      <div class="sticky-search">
+        <button type="button" id="btnPatternSearch" class="btn primary block">この条件で検索</button>
+      </div>
+    </section>
+
+    <section class="results">
+      <h2 id="resultCount">検索結果: — 件</h2>
+      <p id="resultSummary" class="summary"></p>
+      <div id="resultCards" class="result-cards"></div>
+      <div class="table-wrap desktop-only">
+        <table id="resultTable">
+          <thead>
+            <tr>
+              <th>単語</th>
+              <th>よみ</th>
+              <th>文字数</th>
+              <th>カテゴリ</th>
+              <th>ヒント</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p id="emptyMessage" class="empty hidden">該当する語がありません。</p>
+    </section>
+  </div>
+
+  <script src="js/search.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
