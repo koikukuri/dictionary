@@ -2,7 +2,6 @@
 
 const NL_EXAMPLES = [
   "3文字目がマの5文字の言葉",
-  "タから始まる麺料理",
   "1文字目がプ、4文字目がタの5文字の言葉",
 ];
 
@@ -164,12 +163,12 @@ function renderResults(results, summary) {
     card.className = "word-card";
     card.innerHTML = `
       <div class="word">${escapeHtml(row["単語・フレーズ"] || "")}</div>
-      <div class="meta">${escapeHtml(row["よみ"] || "")} · ${escapeHtml(row["文字数"] || "")}文字 · ${escapeHtml(row["メインカテゴリ"] || "")}</div>
+      <div class="meta">${escapeHtml(row["よみ"] || "")} · ${escapeHtml(row["文字数"] || "")}文字 · ZIPF ${escapeHtml(row["ZIPF"] || "—")} · ${escapeHtml(row["メインカテゴリ"] || "")}</div>
       <div class="hint">${escapeHtml(row["補足・ヒント"] || "")}</div>`;
     cards.appendChild(card);
 
     const tr = document.createElement("tr");
-    ["単語・フレーズ", "よみ", "文字数", "メインカテゴリ", "補足・ヒント"].forEach((key) => {
+    ["単語・フレーズ", "よみ", "文字数", "ZIPF", "メインカテゴリ", "補足・ヒント"].forEach((key) => {
       const td = document.createElement("td");
       td.textContent = row[key] || "";
       tr.appendChild(td);

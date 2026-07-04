@@ -156,8 +156,20 @@ function matchCriteria(row, criteria) {
   return true;
 }
 
+function getZipf(row) {
+  const raw = row["ZIPF"];
+  const n = parseFloat(raw, 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function searchWords(rows, criteria) {
-  return rows.filter((row) => matchCriteria(row, criteria));
+  return rows
+    .filter((row) => matchCriteria(row, criteria))
+    .sort((a, b) => {
+      const diff = getZipf(b) - getZipf(a);
+      if (diff !== 0) return diff;
+      return (a["よみ"] || "").localeCompare(b["よみ"] || "", "ja");
+    });
 }
 
 function parseNaturalQuery(query) {
@@ -267,26 +279,56 @@ function criteriaSummary(criteria) {
   return parts.length ? parts.join(" / ") : "（条件なし）";
 }
 
-async function loadWordData(basePath = "") {
+function csvCandidateUrls(filename, basePath = "") {
   const prefix = basePath.replace(/\/?$/, "/");
-  const mainRes = await fetch(`${prefix}word_list.csv`);
-  if (!mainRes.ok) throw new Error("word_list.csv を読み込めません");
+  const urls = [`${prefix}${filename}`];
 
-  let rows = parseCsv(await mainRes.text());
+  if (location.hostname.endsWith("github.io")) {
+    const parts = location.pathname.split("/").filter(Boolean);
+    if (parts.length >= 1) {
+      const owner = location.hostname.replace(".github.io", "");
+      const repo = parts[0];
+      urls.push(`https://raw.githubusercontent.com/${owner}/${repo}/main/${filename}`);
+      urls.push(`https://raw.githubusercontent.com/${owner}/${repo}/master/${filename}`);
+    }
+  }
+
+  return [...new Set(urls)];
+}
+
+async function fetchText(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url} (${res.status})`);
+  return res.text();
+}
+
+async function fetchTextFirst(urls) {
+  let lastError = null;
+  for (const url of urls) {
+    try {
+      return await fetchText(url);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError || new Error("CSV を読み込めません");
+}
+
+async function loadWordData(basePath = "") {
+  const mainText = await fetchTextFirst(csvCandidateUrls("word_list.csv", basePath));
+  let rows = parseCsv(mainText);
 
   try {
-    const supRes = await fetch(`${prefix}word_list_supplement.csv`);
-    if (supRes.ok) {
-      const extra = parseCsv(await supRes.text());
-      const existing = new Set(rows.map((r) => r["単語・フレーズ"]));
-      extra.forEach((row) => {
-        const w = row["単語・フレーズ"];
-        if (w && !existing.has(w)) {
-          rows.push(row);
-          existing.add(w);
-        }
-      });
-    }
+    const supText = await fetchTextFirst(csvCandidateUrls("word_list_supplement.csv", basePath));
+    const extra = parseCsv(supText);
+    const existing = new Set(rows.map((r) => r["単語・フレーズ"]));
+    extra.forEach((row) => {
+      const w = row["単語・フレーズ"];
+      if (w && !existing.has(w)) {
+        rows.push(row);
+        existing.add(w);
+      }
+    });
   } catch (_) {
     /* supplement は任意 */
   }
